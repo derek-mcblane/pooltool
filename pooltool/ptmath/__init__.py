@@ -1,6 +1,9 @@
 """Math functions"""
 
 import pooltool.ptmath.roots as roots
+from pooltool.ptmath.quaternion import (
+    Quaternion
+)
 from pooltool.ptmath.utils import (
     angle,
     angle_between_vectors,
@@ -27,6 +30,7 @@ from pooltool.ptmath.utils import (
 
 __all__ = [
     "roots",
+    "Quaternion",
     "angle",
     "angle_between_vectors",
     "coordinate_rotation",

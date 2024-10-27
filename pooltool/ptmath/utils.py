@@ -5,6 +5,7 @@ import numpy as np
 from numba import jit
 from numpy.typing import NDArray
 
+from pooltool.ptmath.quaternion import Quaternion
 import pooltool.constants as const
 
 
@@ -216,6 +217,21 @@ def coordinate_rotation(v: NDArray[np.float64], phi: float) -> NDArray[np.float6
 
     return np.dot(rotation, v)
 
+@jit(nopython=True, cache=const.use_numba_cache)
+def rotate_vector3_by_quaternion(v3: NDArray[np.float64], q: Quaternion) -> NDArray[np.float64]:
+    """Transform v3 by quaternion rotation 
+    
+    This assumes q is a unit quaternion
+    """
+    v = Quaternion(0, *v3[:])
+    return (q * v * q.conjugate())[1:3]
+
+@jit(nopython=True, cache=const.use_numba_cache)
+def rotate_vector3_angle_axis(v3: NDArray[np.float64], angle: float, axis: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Transform v3 by angle axis rotation
+    """
+    return rotate_vector3_by_quaternion(v3, Quaternion.from_angle_axis(angle, axis))
+
 
 @jit(nopython=True, cache=const.use_numba_cache)
 def point_on_line_closest_to_point(
@@ -228,6 +244,13 @@ def point_on_line_closest_to_point(
     diff = p2 - p1
     t = -np.dot(p1 - p0, diff) / np.dot(diff, diff)
     return p1 + diff * t
+
+
+@jit(nopython=True, cache=const.use_numba_cache)
+def norm4d(vec: NDArray[np.float64]) -> float:
+    """Calculate the norm of a 4D vector
+    """
+    return sqrt(vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2 + vec[3] ** 2)
 
 
 @jit(nopython=True, cache=const.use_numba_cache)
@@ -258,13 +281,35 @@ def norm2d(vec: NDArray[np.float64]) -> float:
 
 
 @jit(nopython=True, cache=const.use_numba_cache)
+def dot3d(u: NDArray[np.float64], v: NDArray[np.float64]) -> float:
+    """Calculate the dot product of two 3D vectors
+    """
+
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+@jit(nopython=True, cache=const.use_numba_cache)
+def dot4d(u: NDArray[np.float64], v: NDArray[np.float64]) -> float:
+    """Calculate the dot product of two 3D vectors
+    """
+
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2] + u[3] * v[3]
+
+
+@jit(nopython=True, cache=const.use_numba_cache)
+def surface_velocity(rvw: NDArray[np.float64], d: NDArray[np.float64], R: float) -> NDArray[np.float64]:
+    """Compute velocity of a point on ball's surface (specified by unit direction vector)
+    """
+    _, v, w = rvw
+    return v + cross(w, R * d)
+
+
+@jit(nopython=True, cache=const.use_numba_cache)
 def rel_velocity(rvw: NDArray[np.float64], R: float) -> NDArray[np.float64]:
-    """Compute velocity of cloth with respect to ball's point of contact
+    """Compute velocity of ball's point of contact with the cloth relative to the cloth
 
     This vector is non-zero whenever the ball is sliding
     """
-    _, v, w = rvw
-    return v + R * cross(np.array([0.0, 0.0, 1.0], dtype=np.float64), w)
+    return surface_velocity(rvw, np.array([0.0, 0.0, -1.0], dtype=np.float64), R)
 
 
 @jit(nopython=True, cache=const.use_numba_cache)

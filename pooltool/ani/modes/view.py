@@ -12,6 +12,7 @@ from pooltool.ani.hud import hud
 from pooltool.ani.modes.datatypes import BaseMode, Mode
 from pooltool.ani.mouse import MouseMode, mouse
 from pooltool.objects.ball.datatypes import Ball
+from pooltool.ptmath.utils import norm2d, tip_contact_offset
 from pooltool.system.datatypes import multisystem
 from pooltool.system.render import PlaybackMode, visual
 
@@ -204,10 +205,21 @@ class ViewMode(BaseMode):
         new_y = cue.getY() + delta_y
         new_z = cue.getZ() + delta_z
 
-        norm = np.sqrt(new_y**2 + new_z**2)
-        if norm > ani.max_english * R:
-            new_y *= ani.max_english * R / norm
-            new_z *= ani.max_english * R / norm
+        # y corresponds to side spin, z to top/bottom spin
+        cue_axis_offset = (
+            np.array([-new_y, new_z]) / R
+        )  # components normalized to ball radius
+        contact_point_offset = tip_contact_offset(
+            cue_axis_offset, multisystem.active.cue.specs.tip_radius, R
+        )
+
+        norm = norm2d(contact_point_offset)
+        if norm > ani.max_english:
+            limit_scaling_factor = ani.max_english / norm
+            new_y *= limit_scaling_factor
+            new_z *= limit_scaling_factor
+            cue_axis_offset *= limit_scaling_factor
+            contact_point_offset *= limit_scaling_factor
 
         cue.setY(new_y)
         cue.setZ(new_z)
@@ -221,8 +233,8 @@ class ViewMode(BaseMode):
             cue_focus.setR(-cue_avoid.min_theta)
 
         multisystem.active.cue.set_state(
-            a=-new_y / R,
-            b=new_z / R,
+            a=contact_point_offset[0],
+            b=contact_point_offset[1],
             theta=-visual.cue.get_node("cue_stick_focus").getR(),
         )
 

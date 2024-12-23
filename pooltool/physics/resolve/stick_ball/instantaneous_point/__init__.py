@@ -9,7 +9,7 @@ from pooltool.objects.ball.datatypes import Ball, BallState
 from pooltool.objects.cue.datatypes import Cue
 from pooltool.physics.resolve.stick_ball.core import CoreStickBallCollision
 from pooltool.physics.resolve.stick_ball.squirt import get_squirt_angle
-from pooltool.ptmath.utils import coordinate_rotation
+from pooltool.ptmath.utils import coordinate_rotation, tip_contact_point_offset
 
 
 def cue_strike(m, M, R, V0, phi, theta, a, b, english_throttle: float):
@@ -130,6 +130,10 @@ class InstantaneousPoint(CoreStickBallCollision):
     squirt_throttle: float = 1.0
 
     def solve(self, cue: Cue, ball: Ball) -> Tuple[Cue, Ball]:
+        contact_a, contact_b = tip_contact_point_offset(
+            np.array([cue.a, cue.b]), cue.specs.tip_radius, ball.params.R
+        )
+
         v, w = cue_strike(
             ball.params.m,
             cue.specs.M,
@@ -137,15 +141,15 @@ class InstantaneousPoint(CoreStickBallCollision):
             cue.V0,
             cue.phi,
             cue.theta,
-            cue.a,
-            cue.b,
+            contact_a,
+            contact_b,
             english_throttle=self.english_throttle,
         )
 
         alpha = get_squirt_angle(
             ball.params.m,
             cue.specs.end_mass,
-            cue.a,
+            contact_a,
             self.squirt_throttle,
         )
         v = coordinate_rotation(v, alpha)

@@ -338,7 +338,14 @@ def is_overlapping(
 
 
 @jit(nopython=True, cache=const.use_numba_cache)
-def tip_contact_point_offset(
+def tip_contact_offset(
     cue_center_offset: NDArray[np.float64], tip_radius: float, ball_radius: float
 ) -> NDArray[np.float64]:
     return cue_center_offset / (1 + tip_radius / ball_radius)
+
+
+@jit(nopython=True, cache=const.use_numba_cache)
+def tip_center_offset(
+    tip_center_offset: NDArray[np.float64], tip_radius: float, ball_radius: float
+) -> NDArray[np.float64]:
+    return tip_center_offset * (1 + tip_radius / ball_radius)

@@ -35,6 +35,7 @@ class CueSpecs:
     M: float = field(default=0.567)
     length: float = field(default=1.4732)
     tip_radius: float = field(default=0.007)
+    shaft_diameter: float = field(default=0.0125)
     butt_radius: float = field(default=0.02)
     end_mass: float = field(default=0.170097 / 30)
 

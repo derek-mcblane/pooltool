@@ -159,8 +159,9 @@ class ViewMode(BaseMode):
         if V0 > ani.max_stroke_speed:
             V0 = ani.max_stroke_speed
 
-        multisystem.active.cue.set_state(V0=V0)
-        hud.update_cue(multisystem.active.cue)
+        system_cue = multisystem.active.cue
+        system_cue.set_state(V0=V0)
+        hud.update_cue(system_cue, multisystem.active.balls[system_cue.cue_ball_id])
 
     def view_elevate_cue(self):
         visual.cue.show_nodes(ignore=("cue_cseg",))
@@ -183,8 +184,9 @@ class ViewMode(BaseMode):
 
         cue.setR(-new_elevation)
 
-        multisystem.active.cue.set_state(theta=new_elevation)
-        hud.update_cue(multisystem.active.cue)
+        system_cue = multisystem.active.cue
+        system_cue.set_state(theta=new_elevation)
+        hud.update_cue(system_cue, multisystem.active.balls[system_cue.cue_ball_id])
 
     def view_apply_english(self):
         visual.cue.show_nodes(ignore=("cue_cseg",))
@@ -224,7 +226,8 @@ class ViewMode(BaseMode):
             theta=-visual.cue.get_node("cue_stick_focus").getR(),
         )
 
-        hud.update_cue(multisystem.active.cue)
+        system_cue = multisystem.active.cue
+        hud.update_cue(system_cue, multisystem.active.balls[system_cue.cue_ball_id])
 
     def change_animation(self, shot_index):
         """Switch to a different system in the system collection"""
@@ -256,4 +259,5 @@ class ViewMode(BaseMode):
         cue_avoid.init_collisions()
 
         # Set the HUD
-        hud.update_cue(multisystem.active.cue)
+        system_cue = multisystem.active.cue
+        hud.update_cue(system_cue, multisystem.active.balls[system_cue.cue_ball_id])

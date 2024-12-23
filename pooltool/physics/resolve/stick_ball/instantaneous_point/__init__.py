@@ -9,7 +9,7 @@ from pooltool.objects.ball.datatypes import Ball, BallState
 from pooltool.objects.cue.datatypes import Cue
 from pooltool.physics.resolve.stick_ball.core import CoreStickBallCollision
 from pooltool.physics.resolve.stick_ball.squirt import get_squirt_angle
-from pooltool.ptmath.utils import coordinate_rotation, tip_contact_point_offset
+from pooltool.ptmath.utils import coordinate_rotation
 
 
 def cue_strike(m, M, R, V0, phi, theta, a, b, english_throttle: float):
@@ -62,8 +62,7 @@ def cue_strike(m, M, R, V0, phi, theta, a, b, english_throttle: float):
     english_throttle:
         This modulates the amount of spin that is generated from a cue strike, where
         english_throttle < 1 produces less spin than the model's default, and
-        english_throttle > 1 produces more. In the interactive interface,
-        english_throttle of 0.5 produces somewhat realistic seeming spin.
+        english_throttle > 1 produces more.
     """
 
     a *= R
@@ -130,10 +129,6 @@ class InstantaneousPoint(CoreStickBallCollision):
     squirt_throttle: float = 1.0
 
     def solve(self, cue: Cue, ball: Ball) -> Tuple[Cue, Ball]:
-        contact_a, contact_b = tip_contact_point_offset(
-            np.array([cue.a, cue.b]), cue.specs.tip_radius, ball.params.R
-        )
-
         v, w = cue_strike(
             ball.params.m,
             cue.specs.M,
@@ -141,15 +136,15 @@ class InstantaneousPoint(CoreStickBallCollision):
             cue.V0,
             cue.phi,
             cue.theta,
-            contact_a,
-            contact_b,
+            cue.a,
+            cue.b,
             english_throttle=self.english_throttle,
         )
 
         alpha = get_squirt_angle(
             ball.params.m,
             cue.specs.end_mass,
-            contact_a,
+            cue.a,
             self.squirt_throttle,
         )
         v = coordinate_rotation(v, alpha)

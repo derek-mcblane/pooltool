@@ -11,7 +11,7 @@ from pooltool.error import ConfigError, StrokeError
 from pooltool.objects.ball.render import BallRender
 from pooltool.objects.cue.datatypes import Cue
 from pooltool.objects.datatypes import Render
-from pooltool.ptmath.utils import tip_center_offset
+from pooltool.ptmath.utils import tip_center_offset, tip_contact_offset
 
 
 class CueRender(Render):
@@ -248,8 +248,12 @@ class CueRender(Render):
         assert V0 is not None
 
         theta = -cue_stick_focus.getR()
-        a = -cue_stick.getY() / self.follow._ball.params.R
-        b = cue_stick.getZ() / self.follow._ball.params.R
+        a, b = tip_contact_offset(
+            np.array([-cue_stick.getY(), cue_stick.getZ()])
+            / self.follow._ball.params.R,
+            self._cue.specs.shaft_tip_radius,
+            self.follow._ball.params.R,
+        )
         ball_id = self.follow._ball.id
 
         return V0, phi, theta, a, b, ball_id

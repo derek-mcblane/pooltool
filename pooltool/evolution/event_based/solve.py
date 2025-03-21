@@ -1,5 +1,5 @@
 from math import acos
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 from numba import jit
@@ -230,7 +230,11 @@ def ball_linear_cushion_collision_time(
     A = lx * ax + ly * ay
     B = lx * bx + ly * by
 
-    if direction == 0:
+    # Shots that are parrallel to the rail have no roots
+    # which would cause division by zero quadratic.solve
+    if np.abs(A) < const.EPS and np.abs(B) < const.EPS:
+        roots: List[float] = [0.0 for _ in range(0)]  # for numba type inference
+    elif direction == 0:
         C = l0 + lx * cx + ly * cy + R * np.sqrt(lx**2 + ly**2)
         root1, root2 = ptmath.roots.quadratic.solve(A, B, C)
         roots = [root1, root2]

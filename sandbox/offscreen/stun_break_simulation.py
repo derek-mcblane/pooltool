@@ -63,6 +63,21 @@ def setup_eightball_stun_break(
     return generate_layout(blueprint, table, ballset=DEFAULT_STANDARD_BALLSET, **kwargs)
 
 
+def setup_frozen_balls(
+    table: Table,
+    ball_params: BallParams = BallParams.default(game_type=GameType.EIGHTBALL),
+    **kwargs,
+) -> Dict[str, Ball]:
+    blueprint = ball_cluster_blueprint(
+        seed=BallPos([], (0.5, 0.75), {"1"}),
+        jump_sequence=[
+            (Jump.DOWN(), {"cue"}),
+            ([Dir.UP, Dir.UP], {"2"}),
+        ],
+    )
+    return generate_layout(blueprint, table, ballset=DEFAULT_STANDARD_BALLSET, **kwargs)
+
+
 def main(args):
     if args.seed is not None:
         np.random.seed(args.seed)
@@ -72,7 +87,7 @@ def main(args):
     kwargs = {}
     if args.spacing_factor is not None:
         kwargs["spacing_factor"] = args.spacing_factor
-    balls = setup_eightball_stun_break(table, **kwargs)
+    balls = setup_frozen_balls(table, **kwargs)
 
     system = pt.System(cue=pt.Cue(cue_ball_id="cue"), table=table, balls=balls)
 
@@ -84,7 +99,7 @@ def main(args):
     pt.simulate(system, inplace=True)
 
     if not args.render_images:
-        camera_state = __camera_states["rack_overhead"]
+        camera_state = __camera_states["footspot"]
         pt.show(system, camera_state=camera_state)
     else:
         # Make an dump dir
@@ -95,7 +110,7 @@ def main(args):
 
         stepper = FrameStepper()
 
-        for camera_state in ["rack_overhead"]:
+        for camera_state in ["footspot"]:
             exporter = ImageZip(path / f"{camera_state}.zip", ext="png")
 
             imgs = image_stack(

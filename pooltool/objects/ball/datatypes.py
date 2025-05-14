@@ -450,6 +450,51 @@ class Ball:
         self.ballset = ballset
         validate(self)
 
+    def set_position_next_to(self, ball: Ball, line_of_centers: NDArray[np.float64]):
+        self.state.rvw[0] = ball.xyz + (
+            ball.params.R + self.params.R
+        ) * ptmath.unit_vector_slow(line_of_centers)
+
+    def set_position_next_to_at_xy_angle(
+        self, ball: Ball, xy_line_of_centers_angle_radians: float
+    ):
+        self.state.rvw[0] = ball.xyz + ptmath.coordinate_rotation(
+            np.array([ball.params.R + self.params.R, 0.0, 0.0]),
+            xy_line_of_centers_angle_radians,
+        )
+
+    def setup_motion(
+        self,
+        speed: float = 0.0,
+        velocity_xy_direction_angle_radians: float = 0.0,
+        topspin_radians_per_second: float = 0.0,
+        sidespin_radians_per_second: float = 0.0,
+    ):
+        self.state.rvw[1] = np.array([speed, 0.0, 0.0])
+        self.state.rvw[1] = ptmath.coordinate_rotation(
+            self.state.rvw[1], velocity_xy_direction_angle_radians
+        )
+
+        self.state.rvw[2] = np.array(
+            [0.0, topspin_radians_per_second, sidespin_radians_per_second]
+        )
+        self.state.rvw[2] = ptmath.coordinate_rotation(
+            self.state.rvw[2], velocity_xy_direction_angle_radians
+        )
+
+    def rolling_topspin(self):
+        speed_tangent = ptmath.norm2d(self.vel[0:1])
+        return -speed_tangent / self.params.R
+
+    def gearing_sidespin(
+        self,
+        xy_line_of_centers_unit_vector: NDArray[np.float64] = np.zeros(2),
+    ):
+        speed_tangent = ptmath.norm2d(
+            ptmath.vector_rejection(self.vel[0:1], xy_line_of_centers_unit_vector)
+        )
+        return -speed_tangent / self.params.R
+
     def copy(self, drop_history: bool = False) -> Ball:
         """Create a copy
 

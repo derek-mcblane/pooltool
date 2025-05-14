@@ -165,6 +165,27 @@ def unit_vector_slow(
 
 
 @jit(nopython=True, cache=const.use_numba_cache)
+def unit_vector2(
+    vector: NDArray[np.float64], handle_zero: bool = False
+) -> NDArray[np.float64]:
+    """Returns the unit vector of the vector (just-in-time compiled)
+
+    Parameters
+    ==========
+    handle_zero: bool, False
+        If True and vector = <0,0,0>, <0,0,0> is returned.
+
+    Notes
+    =====
+    - Only supports 3D (for 2D see unit_vector_slow)
+    """
+    norm = norm2d(vector)
+    if handle_zero and norm == 0.0:
+        norm = 1.0
+    return vector / norm
+
+
+@jit(nopython=True, cache=const.use_numba_cache)
 def unit_vector(
     vector: NDArray[np.float64], handle_zero: bool = False
 ) -> NDArray[np.float64]:
@@ -255,6 +276,16 @@ def norm2d(vec: NDArray[np.float64]) -> float:
     This is faster than np.linalg.norm
     """
     return sqrt(vec[0] ** 2 + vec[1] ** 2)
+
+
+def vector_projection(a: NDArray, b: NDArray):
+    assert np.ndim(a) == 1
+    assert np.ndim(b) == 1
+    return (np.linalg.vecdot(a, b) / np.linalg.norm(b)) * b
+
+
+def vector_rejection(a: NDArray, b: NDArray):
+    return a - vector_projection(a, b)
 
 
 @jit(nopython=True, cache=const.use_numba_cache)

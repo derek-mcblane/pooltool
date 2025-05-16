@@ -5,6 +5,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
+import pooltool.ptmath as ptmath
+
 from pooltool.objects.ball.datatypes import Ball, BallParams
 from pooltool.physics.resolve.ball_ball.friction import (
     AlciatoreBallBallFriction,
@@ -12,16 +14,6 @@ from pooltool.physics.resolve.ball_ball.friction import (
 )
 from pooltool.physics.resolve.ball_ball.frictional_inelastic import FrictionalInelastic
 from pooltool.physics.resolve.ball_ball.frictional_mathavan import FrictionalMathavan
-
-
-def natural_roll(ball_speed: float, ball_radius: float):
-    return ball_speed / ball_radius
-
-
-def spin_from_english_fraction(
-    english_fraction: float, ball_speed: float, ball_radius: float
-):
-    return 1.25 * english_fraction * natural_roll(ball_speed, ball_radius)
 
 
 def stun_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
@@ -47,11 +39,13 @@ def stun_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
 
     for speed in speeds:
         throw_angle_out = np.empty_like(cut_angle_in)
+        induced_corkscrew_factor_out = np.empty_like(cut_angle_in)
+        induced_topspin_factor_out = np.empty_like(cut_angle_in)
         induced_sidespin_factor_out = np.empty_like(cut_angle_in)
         for i, cut_angle in enumerate(cut_angle_in):
             ob.state.rvw[0] = np.array([0, 0, cb.params.R])
             cb.set_position_next_to_at_xy_angle(ob, math.pi + xy_line_of_centers_angle)
-            cb.setup_motion(speed, xy_line_of_centers_angle + cut_angle, 0.0)
+            cb.setup_motion(speed, xy_line_of_centers_angle + cut_angle)
 
             cb_f, ob_f = model.resolve(cb, ob, inplace=False)
             assert ob_f.state.rvw[1][2] < 1e-9
@@ -60,7 +54,7 @@ def stun_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
                 np.arctan2(ob_f.state.rvw[1][1], ob_f.state.rvw[1][0])
                 - xy_line_of_centers_angle
             )
-            induced_sidespin_factor_out[i] = ob_f.state.rvw[2][2] / natural_roll(
+            induced_sidespin_factor_out[i] = ob_f.state.rvw[2][2] / ptmath.natural_roll(
                 speed, cb.params.R
             )
 
@@ -99,21 +93,34 @@ def natural_roll_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
     ax2 = fig2.add_subplot()
     ax2.set(
         xlabel="cut_angle (deg)",
-        ylabel="sidespin / natural roll",
+        ylabel="corkscrew spin / CB natural roll",
+        title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Corkscrew Spin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
+    )
+    fig3 = plt.figure(3)
+    ax3 = fig3.add_subplot()
+    ax3.set(
+        xlabel="cut_angle (deg)",
+        ylabel="sidespin / CB natural roll",
+        title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Topspin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
+    )
+    fig4 = plt.figure(4)
+    ax4 = fig4.add_subplot()
+    ax4.set(
+        xlabel="cut_angle (deg)",
+        ylabel="corkscrew spin / CB natural roll",
         title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Sidespin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
     )
 
     for speed in speeds:
         throw_angle_out = np.empty_like(cut_angle_in)
+        induced_corkscrew_factor_out = np.empty_like(cut_angle_in)
+        induced_topspin_factor_out = np.empty_like(cut_angle_in)
         induced_sidespin_factor_out = np.empty_like(cut_angle_in)
         for i, cut_angle in enumerate(cut_angle_in):
             ob.state.rvw[0] = np.array([0, 0, cb.params.R])
             cb.set_position_next_to_at_xy_angle(ob, math.pi + xy_line_of_centers_angle)
-            cb.setup_motion(
-                speed,
-                xy_line_of_centers_angle + cut_angle,
-                natural_roll(speed, cb.params.R),
-            )
+            cb_topspin = ptmath.natural_roll(speed, cb.params.R)
+            cb.setup_motion(speed, xy_line_of_centers_angle + cut_angle, cb_topspin)
 
             cb_f, ob_f = model.resolve(cb, ob, inplace=False)
             assert ob_f.state.rvw[1][2] < 1e-9
@@ -122,9 +129,13 @@ def natural_roll_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
                 np.arctan2(ob_f.state.rvw[1][1], ob_f.state.rvw[1][0])
                 - xy_line_of_centers_angle
             )
-            induced_sidespin_factor_out[i] = ob_f.state.rvw[2][2] / natural_roll(
-                speed, cb.params.R
-            )
+
+            # angular velocity with x-axis aligned to motion direction
+            ob_w = ptmath.coordinate_rotation(ob_f.avel, ptmath.angle(ob_f.vel))
+
+            induced_corkscrew_factor_out[i] = ob_w[0] / cb_topspin
+            induced_topspin_factor_out[i] = ob_w[1] / cb_topspin
+            induced_sidespin_factor_out[i] = ob_w[2] / cb_topspin
 
         ax.plot(
             np.rad2deg(cut_angle_in),
@@ -132,6 +143,16 @@ def natural_roll_shot(model, ball_params, speeds, xy_line_of_centers_angle=0.0):
             label=f"speed={speed:.3} m/s",
         )
         ax2.plot(
+            np.rad2deg(cut_angle_in),
+            induced_corkscrew_factor_out / (2 * math.pi),
+            label=f"speed={speed:.3} m/s",
+        )
+        ax3.plot(
+            np.rad2deg(cut_angle_in),
+            induced_topspin_factor_out / (2 * math.pi),
+            label=f"speed={speed:.3} m/s",
+        )
+        ax4.plot(
             np.rad2deg(cut_angle_in),
             induced_sidespin_factor_out / (2 * math.pi),
             label=f"speed={speed:.3} m/s",
@@ -149,6 +170,7 @@ def head_on_sidespin_shot(model, ball_params, speeds, xy_line_of_centers_angle=0
     ob = Ball(id="object", params=ball_params)
 
     cut_angle = math.radians(0)
+    max_english_offset = cb.params.R / 2
     english_fraction_in = np.linspace(0, 1, 100)
 
     fig, ax = plt.subplots()
@@ -163,7 +185,9 @@ def head_on_sidespin_shot(model, ball_params, speeds, xy_line_of_centers_angle=0
         for i, english_fraction in enumerate(english_fraction_in):
             ob.state.rvw[0] = np.array([0, 0, cb.params.R])
             cb.set_position_next_to_at_xy_angle(ob, math.pi + xy_line_of_centers_angle)
-            sidespin = spin_from_english_fraction(english_fraction, speed, cb.params.R)
+            sidespin = ptmath.spin_rate(
+                english_fraction * max_english_offset, speed, cb.params.R
+            )
             cb.setup_motion(speed, xy_line_of_centers_angle + cut_angle, 0.0, sidespin)
 
             cb_f, ob_f = model.resolve(cb, ob, inplace=False)
@@ -193,8 +217,8 @@ if __name__ == "__main__":
         FrictionalInelastic(friction=alciatore_friction),
         # FrictionalMathavan(friction=alciatore_friction),
         # FrictionalInelastic(friction=average_friction),
-        # FrictionalMathavan(friction=average_friction),
+        FrictionalMathavan(friction=average_friction),
     ]:
         stun_shot(model, ball_params, alciatore_speeds, math.radians(123))
-        natural_roll_shot(model, ball_params, alciatore_speeds)
+        natural_roll_shot(model, ball_params, alciatore_speeds, math.radians(25))
         head_on_sidespin_shot(model, ball_params, alciatore_speeds, math.radians(-123))

@@ -372,6 +372,20 @@ def get_ball_energy(rvw: NDArray[np.float64], R: float, m: float) -> float:
     return LKE + RKE
 
 
+def natural_roll(ball_speed: float, R: float) -> float:
+    return ball_speed / R
+
+
+def spin_rate_factor(impulse_offset: float, R: float) -> float:
+    """spin_rate / natural_roll"""
+    return 2.5 * impulse_offset / R
+
+
+def spin_rate(impulse_offset: float, ball_speed: float, R: float):
+    """From impulse momentum equations. spin_rate_factor * natural_roll"""
+    return 2.5 * ball_speed * impulse_offset / R**2
+
+
 def is_overlapping(
     rvw1: NDArray[np.float64], rvw2: NDArray[np.float64], R1: float, R2: float
 ) -> bool:

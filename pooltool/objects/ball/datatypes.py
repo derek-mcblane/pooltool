@@ -482,9 +482,9 @@ class Ball:
             self.state.rvw[2], velocity_xy_direction_angle_radians
         )
 
-    def rolling_topspin(self):
+    def natural_roll(self):
         speed_tangent = ptmath.norm2d(self.vel[0:1])
-        return -speed_tangent / self.params.R
+        return ptmath.natural_roll(speed_tangent, self.params.R)
 
     def gearing_sidespin(
         self,

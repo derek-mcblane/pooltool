@@ -376,12 +376,12 @@ def natural_roll(ball_speed: float, R: float) -> float:
     return ball_speed / R
 
 
-def spin_rate_factor(impulse_offset: float, R: float) -> float:
+def cue_strike_spin_rate_factor(impulse_offset: float, R: float) -> float:
     """spin_rate / natural_roll"""
     return 2.5 * impulse_offset / R
 
 
-def spin_rate(impulse_offset: float, ball_speed: float, R: float):
+def cue_strike_spin_rate(impulse_offset: float, ball_speed: float, R: float):
     """From impulse momentum equations. spin_rate_factor * natural_roll"""
     return 2.5 * ball_speed * impulse_offset / R**2
 

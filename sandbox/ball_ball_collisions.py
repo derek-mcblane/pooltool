@@ -50,15 +50,11 @@ class BallBallCollisionExperiment:
         return ptmath.natural_roll(cb_speed, self.cb_i.params.R)
         
     def result(self, cb_speed: float, cb_topspin: float = 0.0, cb_sidespin: float = 0.0, cut_angle: float = 0.0):
-        self.cb_i.setup_motion(cb_speed, self.config.xy_line_of_centers_angle_radians + cut_angle, cb_topspin, cb_sidespin)
+        self.cb_i.setup_motion(cb_speed, self.config.xy_line_of_centers_angle_radians - cut_angle, cb_topspin, cb_sidespin)
         return self.config.model.resolve(self.cb_i, self.ob_i, inplace=False)
 
 
-def loc_aligned_vector(vector: np.typing.NDArray[np.float64], xy_line_of_centers_angle_radians: float) -> np.typing.NDArray[np.float64]:
-    return ptmath.coordinate_rotation(vector, -xy_line_of_centers_angle_radians)
-
-
-def collision_results_at_varying_cut_angle(experiment_config: BallBallCollisionExperimentConfig, cut_angles, speeds, topspins = None, sidespins = None, spin_as_factor_of_natural_roll = True):
+def collision_results_versus_cut_angle(experiment_config: BallBallCollisionExperimentConfig, cut_angles, speeds, topspins = None, sidespins = None, spin_as_factor_of_natural_roll = True):
     if topspins is None:
         topspins = [0.0]
     if sidespins is None:
@@ -82,15 +78,15 @@ def collision_results_at_varying_cut_angle(experiment_config: BallBallCollisionE
                 throw_angles = np.empty(n_cut_angles)
                 for i, cut_angle in enumerate(cut_angles):
                     cb_f, ob_f = collision_experiment.result(speed, topspin, sidespin, cut_angle)
-                    induced_vel[i] = loc_aligned_vector(ob_f.vel, config.xy_line_of_centers_angle_radians)
-                    induced_spin[i] = loc_aligned_vector(ob_f.avel, config.xy_line_of_centers_angle_radians)
-                    throw_angles[i] = np.atan2(induced_vel[i, 1], induced_vel[i, 0])
+                    induced_vel[i] = ptmath.coordinate_rotation(ob_f.vel, config.xy_line_of_centers_angle_radians)
+                    induced_spin[i] = ptmath.coordinate_rotation(ob_f.avel, config.xy_line_of_centers_angle_radians)
+                    throw_angles[i] = -np.atan2(induced_vel[i, 1], induced_vel[i, 0])
                 results[(speed, topspin, sidespin)] = (induced_vel, induced_spin, throw_angles)
 
     return results
 
 
-def collision_results_at_varying_sidespin(experiment_config: BallBallCollisionExperimentConfig, sidespins, speeds, topspins = None, spin_as_factor_of_natural_roll = True, cut_angles = None):
+def collision_results_versus_sidespin(experiment_config: BallBallCollisionExperimentConfig, sidespins, speeds, topspins = None, spin_as_factor_of_natural_roll = True, cut_angles = None):
     if topspins is None:
         topspins = [0.0]
     if cut_angles is None:
@@ -114,141 +110,98 @@ def collision_results_at_varying_sidespin(experiment_config: BallBallCollisionEx
                     if spin_as_factor_of_natural_roll:
                         sidespin = sidespin * natural_roll
                     cb_f, ob_f = collision_experiment.result(speed, topspin, sidespin, cut_angle)
-                    induced_vel[i] = loc_aligned_vector(ob_f.vel, config.xy_line_of_centers_angle_radians)
-                    induced_spin[i] = loc_aligned_vector(ob_f.avel, config.xy_line_of_centers_angle_radians)
-                    throw_angles[i] = np.atan2(induced_vel[i, 1], induced_vel[i, 0])
+                    induced_vel[i] = ptmath.coordinate_rotation(ob_f.vel, config.xy_line_of_centers_angle_radians)
+                    induced_spin[i] = ptmath.coordinate_rotation(ob_f.avel, config.xy_line_of_centers_angle_radians)
+                    throw_angles[i] = -np.atan2(induced_vel[i, 1], induced_vel[i, 0])
                 results[(speed, topspin, cut_angle)] = (induced_vel, induced_spin, throw_angles)
 
     return results
 
 
-def natural_roll_shot_multiple_speeds(config, speeds):
+def plot_throw_vs_cut_angle(title: str, config, speeds, topspins = None, sidespins = None, spin_as_factor_of_natural_roll=True):
     cut_angles = np.linspace(0, np.pi / 2, 90 * 2, endpoint=False)
-    results = collision_results_at_varying_cut_angle(config, cut_angles, speeds, topspins=[1.0], spin_as_factor_of_natural_roll=True);
+    results = collision_results_versus_cut_angle(config, cut_angles, speeds, topspins, sidespins, spin_as_factor_of_natural_roll)
     cut_angles_deg = np.rad2deg(cut_angles)
+
     fig = plt.figure(1)
     ax = fig.add_subplot()
     ax.set(
-        xlabel="cut_angle (deg)",
+        xlabel="cut angle (deg)",
         ylabel="throw angle (deg)",
-        title=f"Natural-Roll Shot Collision at Various Speeds - Throw Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
+        title=title,
     )
-    fig2 = plt.figure(2)
-    ax2 = fig2.add_subplot()
-    ax2.set(
-        xlabel="cut_angle (deg)",
-        ylabel="corkscrew spin / CB natural roll",
-        title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Corkscrew Spin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
-    )
-    fig3 = plt.figure(3)
-    ax3 = fig3.add_subplot()
-    ax3.set(
-        xlabel="cut_angle (deg)",
-        ylabel="topspin / CB natural roll",
-        title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Topspin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
-    )
-    fig4 = plt.figure(4)
-    ax4 = fig4.add_subplot()
-    ax4.set(
-        xlabel="cut_angle (deg)",
-        ylabel="sidespin / CB natural roll",
-        title=f"Natural-Roll-Shot Collision at Various Speeds - Induced OB Sidespin vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
-    )
-    for ((speed, _, _), (ob_vels, ob_avels, throw_angles)) in results.items():
+    for ((speed, topspin, sidespin), (_, _, throw_angles)) in results.items():
+        label=f"speed={speed:.3} m/s"
+        natural_roll = ptmath.natural_roll(speed, config.params.R)
+        if topspins is not None:
+            topspin_factor = topspin / natural_roll
+            label += f", topspin_factor={topspin_factor:.2}"
+        if sidespins is not None:
+            sidespin_factor = sidespin / natural_roll
+            label += f", sidespin_factor={sidespin_factor:.2}"
         ax.plot(
             cut_angles_deg,
             np.rad2deg(throw_angles),
-            label=f"speed={speed:.3} m/s",
-        )
-        ax2.plot(
-            cut_angles_deg,
-            ob_avels[:,0],
-            label=f"speed={speed:.3} m/s",
-        )
-        ax3.plot(
-            cut_angles_deg,
-            ob_avels[:,1],
-            label=f"speed={speed:.3} m/s",
-        )
-        ax4.plot(
-            cut_angles_deg,
-            ob_avels[:,2],
-            label=f"speed={speed:.3} m/s",
-        )
-    ax.legend()
-    ax.grid()
-    ax2.legend()
-    ax2.grid()
-    ax3.legend()
-    ax3.grid()
-    ax4.legend()
-    ax4.grid()
-    plt.show()
-
-
-def stun_shot_multiple_speeds(config, speeds):
-    cut_angles = np.linspace(0, np.pi / 2, 90 * 2, endpoint=False)
-    results = collision_results_at_varying_cut_angle(config, cut_angles, speeds);
-    fig = plt.figure(1)
-    ax = fig.add_subplot()
-    ax.set(
-        xlabel="cut_angle (deg)",
-        ylabel="throw angle (deg)",
-        title=f"Stun Shot Collision at Various Speeds - Throw Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
-    )
-    for ((speed, _, _), (_, _, throw_angles)) in results.items():
-        ax.plot(
-            np.rad2deg(cut_angles),
-            np.rad2deg(throw_angles),
-            label=f"speed={speed:.3} m/s",
+            label=label
         )
     ax.legend()
     ax.grid()
     plt.show()
 
 
-def shot_multiple_topspins(config, speed, topspin_factors):
-    cut_angles = np.linspace(0, np.pi / 2, 90 * 2, endpoint=False)
-    results = collision_results_at_varying_cut_angle(config, cut_angles, [speed], topspin_factors);
-    fig = plt.figure(1)
-    ax = fig.add_subplot()
-    ax.set(
-        xlabel="cut_angle (deg)",
-        ylabel="throw angle (deg)",
-        title=f"Head-On Collision with Various Amounts of Topspin - Throw Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})",
-    )
-    for ((speed, topspin, _), (_, _, throw_angles)) in results.items():
-        natural_roll = ptmath.natural_roll(speed, ball_params.R)
-        topspin_factor = topspin / natural_roll
-        ax.plot(
-            np.rad2deg(cut_angles),
-            np.rad2deg(throw_angles),
-            label=f"topspin_factor={topspin_factor:.3}",
-        )
-    ax.legend()
-    ax.grid()
-    plt.show()
+def plot_throw_vs_sidespin_factor(title: str, config, speeds, topspin_factors = None, cut_angles = None):
+    sidespin_factors = np.linspace(-1.25, 1.25, 125 * 2)
+    results = collision_results_versus_sidespin(config, sidespin_factors, speeds, topspin_factors, True, cut_angles);
 
-
-def head_on_sidespin_shot(config, speed, topspin_factors):
-    sidespin_factors = np.linspace(-1.25, 1.25, 100 * 2)
-    results = collision_results_at_varying_sidespin(config, sidespin_factors, [speed], topspin_factors);
     fig = plt.figure(1)
     ax = fig.add_subplot()
     ax.set(
         xlabel="sidespin / natural roll",
         ylabel="throw angle (deg)",
-        title=f"Head-On Collision at Various Speeds - Throw Angle vs. Sidespin\n(model={model.model}, model.friction={model.friction})",
+        title=title
     )
-    for ((speed, _, _), (_, _, throw_angles)) in results.items():
+    for ((speed, topspin, cut_angle), (_, _, throw_angles)) in results.items():
+        label=f"speed={speed:.3} m/s"
+        if topspin_factors is not None:
+            natural_roll = ptmath.natural_roll(speed, config.params.R)
+            topspin_factor = topspin / natural_roll
+            label += f", topspin_factor={topspin_factor:.2}"
+        if cut_angles is not None:
+            cut_angle_deg = math.degrees(cut_angle)
+            label += f", cut_angle={cut_angle_deg:.3} deg"
         ax.plot(
             sidespin_factors,
             np.rad2deg(throw_angles),
-            label=f"speed={speed:.3} m/s",
+            label=label
         )
     ax.legend()
     ax.grid()
     plt.show()
+
+
+def natural_roll_shot_multiple_speeds(config, speeds):
+    title=f"Natural-Roll Shot Collision at Various Speeds\nThrow Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})"
+    plot_throw_vs_cut_angle(title, config, speeds, [1.0])
+
+
+def stun_shot_multiple_speeds(config, speeds):
+    title=f"Stun Shot Collision at Various Speeds\nThrow Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})"
+    plot_throw_vs_cut_angle(title, config, speeds)
+
+
+def shot_multiple_topspins(config, speed, topspin_factors):
+    title=f"Head-On Collision with Various Amounts of Topspin\nThrow Angle vs. Cut Angle\n(model={model.model}, model.friction={model.friction})"
+    plot_throw_vs_cut_angle(title, config, [speed], topspin_factors)
+
+
+def head_on_shot_multiple_sidespins(config, speed, topspin_factors):
+    title=f"Head-On Collision with Various Amounts of Sidespin\nThrow Angle vs. Sidespin\n(model={model.model}, model.friction={model.friction})"
+    plot_throw_vs_sidespin_factor(title, config, [speed], topspin_factors)
+
+
+def half_ball_hit_shot_multiple_topspins(config, speed, topspin_factors):
+    title=f"Half-Ball Hit with Various Amounts of Sidespin - Throw Angle vs. Sidespin\n(model={model.model}, model.friction={model.friction})"
+    plot_throw_vs_sidespin_factor(title, config, [speed], topspin_factors, cut_angles=[math.radians(30)])
 
 
 if __name__ == "__main__":
@@ -258,12 +211,13 @@ if __name__ == "__main__":
     average_friction = AverageBallBallFriction()
     for model in [
         FrictionalInelastic(friction=alciatore_friction),
-        # FrictionalMathavan(friction=alciatore_friction),
-        # FrictionalInelastic(friction=average_friction),
-        # FrictionalMathavan(friction=average_friction),
+        #FrictionalMathavan(friction=alciatore_friction),
+        #FrictionalInelastic(friction=average_friction),
+        FrictionalMathavan(friction=average_friction),
     ]:
-        config = BallBallCollisionExperimentConfig(model=model, params=ball_params, xy_line_of_centers_angle_radians=-123)
-        #natural_roll_shot_multiple_speeds(config, alciatore_speeds)
-        #stun_shot_multiple_speeds(config, alciatore_speeds)
-        #shot_multiple_topspins(config, alciatore_speeds[1], np.linspace(0, 1, 5))
-        head_on_sidespin_shot(config, alciatore_speeds[1], np.linspace(0, 1, 5))
+        config = BallBallCollisionExperimentConfig(model=model, params=ball_params, xy_line_of_centers_angle_radians=0)
+        natural_roll_shot_multiple_speeds(config, alciatore_speeds)
+        stun_shot_multiple_speeds(config, alciatore_speeds)
+        shot_multiple_topspins(config, alciatore_speeds[1], np.linspace(0, 1, 5))
+        head_on_shot_multiple_sidespins(config, alciatore_speeds[1], np.linspace(0, 1, 5))
+        half_ball_hit_shot_multiple_topspins(config, alciatore_speeds[1], np.linspace(0, 1, 5))

@@ -84,7 +84,7 @@ class BallBallCollisionExperiment:
         )
         return cb_i
 
-    def result(
+    def setup(
         self,
         cb_speed: float,
         cb_topspin: float = 0.0,
@@ -98,6 +98,8 @@ class BallBallCollisionExperiment:
             cb_topspin,
             cb_sidespin,
         )
+
+    def result(self):
         return self.config.model.resolve(self.cb_i, self.ob_i, inplace=False)
 
     @staticmethod
@@ -141,23 +143,31 @@ def collision_results_versus_cut_angle(
             topspin = topspin_factor * natural_roll
             for sidespin_factor in sidespin_factors:
                 sidespin = sidespin_factor * natural_roll
+                vel = np.empty((n_cut_angles, 3))
+                avel = np.empty((n_cut_angles, 3))
                 induced_vel = np.empty((n_cut_angles, 3))
-                induced_spin = np.empty((n_cut_angles, 3))
+                induced_avel = np.empty((n_cut_angles, 3))
                 throw_angles = np.empty(n_cut_angles)
                 for i, cut_angle in enumerate(cut_angles):
-                    cb_f, ob_f = collision_experiment.result(
-                        speed, topspin, sidespin, cut_angle
-                    )
+                    collision_experiment.setup(speed, topspin, sidespin, cut_angle)
+                    vel[i] = collision_experiment.cb_i.vel
+                    avel[i] = collision_experiment.cb_i.avel
+
+                    cb_f, ob_f = collision_experiment.result()
+
                     induced_vel[i] = ptmath.coordinate_rotation(
                         ob_f.vel, -config.xy_line_of_centers_angle_radians
                     )
-                    induced_spin[i] = ptmath.coordinate_rotation(
+                    induced_avel[i] = ptmath.coordinate_rotation(
                         ob_f.avel, -config.xy_line_of_centers_angle_radians
                     )
                     throw_angles[i] = -np.atan2(induced_vel[i, 1], induced_vel[i, 0])
+
                 results[(speed, topspin_factor, sidespin_factor)] = (
+                    vel,
+                    avel,
                     induced_vel,
-                    induced_spin,
+                    induced_avel,
                     throw_angles,
                 )
 
@@ -186,24 +196,32 @@ def collision_results_versus_sidespin(
         for topspin_factor in topspin_factors:
             topspin = topspin_factor * natural_roll
             for cut_angle in cut_angles:
+                vel = np.empty((n_sidespins, 3))
+                avel = np.empty((n_sidespins, 3))
                 induced_vel = np.empty((n_sidespins, 3))
-                induced_spin = np.empty((n_sidespins, 3))
+                induced_avel = np.empty((n_sidespins, 3))
                 throw_angles = np.empty(n_sidespins)
                 for i, sidespin_factor in enumerate(sidespin_factors):
                     sidespin = sidespin_factor * natural_roll
-                    cb_f, ob_f = collision_experiment.result(
-                        speed, topspin, sidespin, cut_angle
-                    )
+                    collision_experiment.setup(speed, topspin, sidespin, cut_angle)
+                    vel[i] = collision_experiment.cb_i.vel
+                    avel[i] = collision_experiment.cb_i.avel
+
+                    cb_f, ob_f = collision_experiment.result()
+
                     induced_vel[i] = ptmath.coordinate_rotation(
                         ob_f.vel, -config.xy_line_of_centers_angle_radians
                     )
-                    induced_spin[i] = ptmath.coordinate_rotation(
+                    induced_avel[i] = ptmath.coordinate_rotation(
                         ob_f.avel, -config.xy_line_of_centers_angle_radians
                     )
                     throw_angles[i] = -np.atan2(induced_vel[i, 1], induced_vel[i, 0])
+
                 results[(speed, topspin_factor, cut_angle)] = (
+                    vel,
+                    avel,
                     induced_vel,
-                    induced_spin,
+                    induced_avel,
                     throw_angles,
                 )
 
@@ -228,6 +246,8 @@ def plot_throw_vs_cut_angle(
         title=title,
     )
     for (speed, topspin_factor, sidespin_factor), (
+        _,
+        _,
         _,
         _,
         throw_angles,
@@ -255,7 +275,13 @@ def plot_throw_vs_sidespin_factor(
     fig = plt.figure(1)
     ax = fig.add_subplot()
     ax.set(xlabel="sidespin / natural roll", ylabel="throw angle (deg)", title=title)
-    for (speed, topspin_factor, cut_angle), (_, _, throw_angles) in results.items():
+    for (speed, topspin_factor, cut_angle), (
+        _,
+        _,
+        _,
+        _,
+        throw_angles,
+    ) in results.items():
         label = f"speed={speed:.3} m/s"
         if topspin_factors is not None:
             label += f", topspin_factor={topspin_factor:.2}"
@@ -274,9 +300,13 @@ def plot_throw_vs_percent_sidespin(
     speeds,
     topspin_factors=None,
     cut_angles=None,
+    min_sidespin_percentage=-100,
+    max_sidespin_percentage=100,
     max_english_radius_fraction=0.5,
 ):
-    sidespin_percentages = np.linspace(-100, 100, 100 * 2)
+    sidespin_percentages = np.linspace(
+        min_sidespin_percentage, max_sidespin_percentage, 100 * 2
+    )
     sidespin_factors = np.array(
         [
             cue_strike_spin_rate_factor_percent_english(
@@ -293,7 +323,13 @@ def plot_throw_vs_percent_sidespin(
     fig = plt.figure(1)
     ax = fig.add_subplot()
     ax.set(xlabel="sidespin (% of max)", ylabel="throw angle (deg)", title=title)
-    for (speed, topspin_factor, cut_angle), (_, _, throw_angles) in results.items():
+    for (speed, topspin_factor, cut_angle), (
+        _,
+        _,
+        _,
+        _,
+        throw_angles,
+    ) in results.items():
         label = f"speed={speed:.3} m/s"
         if topspin_factors is not None:
             label += f", topspin_factor={topspin_factor:.2}"
@@ -301,6 +337,121 @@ def plot_throw_vs_percent_sidespin(
             cut_angle_deg = math.degrees(cut_angle)
             label += f", cut_angle={cut_angle_deg:.3} deg"
         ax.plot(sidespin_percentages, np.rad2deg(throw_angles), label=label)
+    ax.legend()
+    ax.grid()
+    plt.show()
+
+
+def plot_spin_transfer_percentage_vs_percent_sidespin(
+    title: str,
+    config,
+    speeds,
+    topspin_factors=None,
+    cut_angles=None,
+    min_sidespin_percentage=-100,
+    max_sidespin_percentage=100,
+    max_english_radius_fraction=0.5,
+):
+    sidespin_percentages = np.linspace(
+        min_sidespin_percentage, max_sidespin_percentage, 100 * 2
+    )
+    sidespin_factors = np.array(
+        [
+            cue_strike_spin_rate_factor_percent_english(
+                sidespin_percentage, max_english_radius_fraction
+            )
+            for sidespin_percentage in sidespin_percentages
+        ]
+    )
+
+    results = collision_results_versus_sidespin(
+        config, sidespin_factors, speeds, topspin_factors, cut_angles
+    )
+
+    fig = plt.figure(1)
+    ax = fig.add_subplot()
+    ax.set(xlabel="sidespin (% of max)", ylabel="spin transfer (%)", title=title)
+    for (speed, topspin_factor, cut_angle), (
+        _,
+        avels,
+        _,
+        induced_avels,
+        _,
+    ) in results.items():
+        label = f"speed={speed:.3} m/s"
+        if topspin_factors is not None:
+            label += f", topspin_factor={topspin_factor:.2}"
+        if cut_angles is not None:
+            cut_angle_deg = math.degrees(cut_angle)
+            label += f", cut_angle={cut_angle_deg:.3} deg"
+        induced_avel_magnitudes = np.array(
+            [ptmath.norm3d(induced_avel) for induced_avel in induced_avels]
+        )
+        avel_magnitudes = np.array([ptmath.norm3d(avel) for avel in avels])
+        spin_transfer_percentage = (
+            np.divide(induced_avel_magnitudes, avel_magnitudes) * 100
+        )
+        ax.plot(sidespin_percentages, spin_transfer_percentage, label=label)
+    ax.legend()
+    ax.grid()
+    plt.show()
+
+
+def plot_spin_transfer_effectiveness_vs_percent_sidespin(
+    title: str,
+    config,
+    speeds,
+    topspin_factors=None,
+    cut_angles=None,
+    min_sidespin_percentage=-100,
+    max_sidespin_percentage=100,
+    max_english_radius_fraction=0.5,
+):
+    sidespin_percentages = np.linspace(
+        min_sidespin_percentage, max_sidespin_percentage, 100 * 2
+    )
+    sidespin_factors = np.array(
+        [
+            cue_strike_spin_rate_factor_percent_english(
+                sidespin_percentage, max_english_radius_fraction
+            )
+            for sidespin_percentage in sidespin_percentages
+        ]
+    )
+
+    results = collision_results_versus_sidespin(
+        config, sidespin_factors, speeds, topspin_factors, cut_angles
+    )
+
+    fig = plt.figure(1)
+    ax = fig.add_subplot()
+    ax.set(
+        xlabel="sidespin (% of max)",
+        ylabel="spin transfer effectiveness (%)",
+        title=title,
+    )
+    for (speed, topspin_factor, cut_angle), (
+        _,
+        avels,
+        induced_vels,
+        induced_avels,
+        _,
+    ) in results.items():
+        label = f"speed={speed:.3} m/s"
+        if topspin_factors is not None:
+            label += f", topspin_factor={topspin_factor:.2}"
+        if cut_angles is not None:
+            cut_angle_deg = math.degrees(cut_angle)
+            label += f", cut_angle={cut_angle_deg:.3} deg"
+        induced_avel_magnitudes = np.array(
+            [ptmath.norm3d(induced_avel) for induced_avel in induced_avels]
+        )
+        spin_transfer_effectiveness = (
+            induced_avel_magnitudes
+            / natural_roll_spin_rate(speed, config.params.R)
+            * 100
+        )
+        ax.plot(sidespin_percentages, spin_transfer_effectiveness, label=label)
     ax.legend()
     ax.grid()
     plt.show()
@@ -426,6 +577,26 @@ def technical_proof_A14_plots(config: BallBallCollisionExperimentConfig):
     )
 
 
+def technical_proof_A27_plots(config: BallBallCollisionExperimentConfig):
+    slow_speed = 0.447
+    medium_speed = 1.341
+    fast_speed = 3.129
+    alciatore_speeds = [slow_speed, medium_speed, fast_speed]
+
+    model_str = config.model.model
+    friction_str = config.model.friction.model
+
+    title = f"Medium-Speed Natural-Roll Shot with Various 100% Sidespins\nSpin Transfer % vs. Cut Angle\n(model={model_str}, model.friction={friction_str})"
+    plot_spin_transfer_percentage_vs_percent_sidespin(
+        title, config, alciatore_speeds, min_sidespin_percentage=1
+    )
+
+    title = f"Medium-Speed Natural-Roll Shot with Various 100% Sidespins\nSpin Transfer Effectiveness vs. Cut Angle\n(model={model_str}, model.friction={friction_str})"
+    plot_spin_transfer_effectiveness_vs_percent_sidespin(
+        title, config, alciatore_speeds, min_sidespin_percentage=1
+    )
+
+
 def main():
     ball_params = BallParams.default()
     alciatore_friction = AlciatoreBallBallFriction(a=9.951e-3, b=0.108, c=1.088)
@@ -436,11 +607,11 @@ def main():
         # FrictionalInelastic(friction=average_friction),
         FrictionalMathavan(friction=average_friction),
     ]:
-        technical_proof_A14_plots(
-            BallBallCollisionExperimentConfig(
-                model=model, params=ball_params, xy_line_of_centers_angle_radians=-234
-            )
+        config = BallBallCollisionExperimentConfig(
+            model=model, params=ball_params, xy_line_of_centers_angle_radians=-234
         )
+        technical_proof_A14_plots(config)
+        technical_proof_A27_plots(config)
 
 
 if __name__ == "__main__":

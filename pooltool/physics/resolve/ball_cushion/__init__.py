@@ -12,6 +12,10 @@ from pooltool.physics.resolve.ball_cushion.han_2005 import (
     Han2005Circular,
     Han2005Linear,
 )
+from pooltool.physics.resolve.ball_cushion.impulse_frictional_inelastic import (
+    ImpulseFrictionalInelasticCircular,
+    ImpulseFrictionalInelasticLinear,
+)
 from pooltool.physics.resolve.ball_cushion.mathavan_2010 import (
     Mathavan2010Circular,
     Mathavan2010Linear,
@@ -25,12 +29,14 @@ from pooltool.physics.resolve.models import BallCCushionModel, BallLCushionModel
 _ball_lcushion_model_registry: Tuple[Type[BallLCushionCollisionStrategy], ...] = (
     Mathavan2010Linear,
     Han2005Linear,
+    ImpulseFrictionalInelasticLinear,
     UnrealisticLinear,
 )
 
 _ball_ccushion_model_registry: Tuple[Type[BallCCushionCollisionStrategy], ...] = (
     Mathavan2010Circular,
     Han2005Circular,
+    ImpulseFrictionalInelasticCircular,
     UnrealisticCircular,
 )
 
@@ -50,9 +56,11 @@ __all__ = [
     "ball_ccushion_models",
     "Mathavan2010Linear",
     "Han2005Linear",
+    "ImpulseFrictionalInelasticLinear",
     "UnrealisticLinear",
     "Mathavan2010Circular",
     "Han2005Circular",
+    "ImpulseFrictionalInelasticCircular",
     "UnrealisticCircular",
     "BallCCushionModel",
     "BallLCushionModel",

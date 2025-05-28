@@ -34,6 +34,7 @@ class BallLCushionModel(StrEnum):
 
     MATHAVAN_2010 = auto()
     HAN_2005 = auto()
+    IMPULSE_FRICTIONAL_INELASTIC = auto()
     UNREALISTIC = auto()
 
 
@@ -50,6 +51,7 @@ class BallCCushionModel(StrEnum):
 
     MATHAVAN_2010 = auto()
     HAN_2005 = auto()
+    IMPULSE_FRICTIONAL_INELASTIC = auto()
     UNREALISTIC = auto()
 
 

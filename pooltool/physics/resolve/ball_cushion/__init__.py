@@ -24,6 +24,10 @@ from pooltool.physics.resolve.ball_cushion.mathavan_2010 import (
     Mathavan2010Circular,
     Mathavan2010Linear,
 )
+from pooltool.physics.resolve.ball_cushion.stronge_compliant import (
+    StrongeCompliantCircular,
+    StrongeCompliantLinear,
+)
 from pooltool.physics.resolve.ball_cushion.unrealistic import (
     UnrealisticCircular,
     UnrealisticLinear,
@@ -35,6 +39,7 @@ _ball_lcushion_model_registry: Tuple[Type[BallLCushionCollisionStrategy], ...] =
     Han2005Linear,
     ImpulseFrictionalInelasticLinear,
     ImpulseIFRLinear,
+    StrongeCompliantLinear,
     UnrealisticLinear,
 )
 
@@ -43,6 +48,7 @@ _ball_ccushion_model_registry: Tuple[Type[BallCCushionCollisionStrategy], ...] =
     Han2005Circular,
     ImpulseFrictionalInelasticCircular,
     ImpulseIFRCircular,
+    StrongeCompliantCircular,
     UnrealisticCircular,
 )
 
@@ -64,11 +70,13 @@ __all__ = [
     "Han2005Linear",
     "ImpulseFrictionalInelasticLinear",
     "ImpulseIFRLinear",
+    "StrongeCompliantLinear",
     "UnrealisticLinear",
     "Mathavan2010Circular",
     "Han2005Circular",
     "ImpulseFrictionalInelasticCircular",
     "ImpulseIFRCircular",
+    "StrongeCompliantCircular",
     "UnrealisticCircular",
     "BallCCushionModel",
     "BallLCushionModel",

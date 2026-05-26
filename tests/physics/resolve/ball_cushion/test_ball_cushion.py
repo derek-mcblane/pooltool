@@ -17,7 +17,7 @@ from pooltool.physics.resolve.ball_cushion import (
         BallLCushionModel.HAN_2005,
         BallLCushionModel.IMPULSE_FRICTIONAL_INELASTIC_2D,
         BallLCushionModel.MATHAVAN_2010,
-        BallLCushionModel.STRONGE_COMPLIANT,
+        BallLCushionModel.STRONGE_COMPLIANT_2D,
     ],
 )
 @pytest.mark.parametrize("theta", np.linspace(1, 89, 10))
@@ -67,7 +67,7 @@ def test_energy(
         BallLCushionModel.HAN_2005,
         BallLCushionModel.IMPULSE_FRICTIONAL_INELASTIC_2D,
         BallLCushionModel.MATHAVAN_2010,
-        BallLCushionModel.STRONGE_COMPLIANT,
+        BallLCushionModel.STRONGE_COMPLIANT_2D,
     ],
 )
 @pytest.mark.parametrize("theta", np.linspace(-89, 89, 20))

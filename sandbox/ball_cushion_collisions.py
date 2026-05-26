@@ -18,7 +18,7 @@ from pooltool.physics.resolve.ball_cushion.impulse_frictional_inelastic import (
 )
 from pooltool.physics.resolve.ball_cushion.mathavan_2010 import Mathavan2010Linear
 from pooltool.physics.resolve.ball_cushion.stronge_compliant import (
-    StrongeCompliantLinear,
+    StrongeCompliantLinear2D,
 )
 
 pio.renderers.default = "browser"
@@ -420,7 +420,7 @@ def main():
         Han2005Linear(),
         Mathavan2010Linear(),
         ImpulseFrictionalInelasticLinear(),
-        StrongeCompliantLinear(),
+        StrongeCompliantLinear2D(),
     ]
 
     ball_params = BallParams.default()

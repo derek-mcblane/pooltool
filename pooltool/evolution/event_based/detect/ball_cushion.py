@@ -75,15 +75,15 @@ def ball_linear_cushion_segment_collison_time(
     cushion_origin_rotated = quaternion.rotate_vectors(frame_rotation, cushion.p1)
 
     C = parabola_circle_distance_2d_quartic_coefficients(
-        p_rotated.T[0:1],
-        cushion_origin_rotated[0:1],
+        p_rotated.T[0:2],
+        cushion_origin_rotated[0:2],
         cushion.nose_radius + ball.params.R,
     )
 
     # FIXME: quartic solver can't handle cubics or quadratics, so checking for quadratic here
-    if np.isclose(C[4], 0.0):
+    if C[4] == 0.0:
         # C[3] must also be 0.0, and this is a quadratic
-        assert np.isclose(C[3], 0.0)
+        assert C[3] == 0.0
         roots = quadratic.solve(C[2], C[1], C[0])
 
     roots = quartic.solve(C[4], C[3], C[2], C[1], C[0])

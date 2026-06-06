@@ -19,6 +19,16 @@ from pooltool.objects.ball.sets import BallSet
 from pooltool.objects.cue.datatypes import Cue
 from pooltool.objects.table.datatypes import Table
 from pooltool.physics.dimensionality import Dim
+from pooltool.physics.resolve.ball_ball.friction import (
+    AlciatoreBallBallFriction,
+)
+from pooltool.physics.resolve.ball_ball.frictional_inelastic import (
+    FrictionalInelastic3D,
+)
+from pooltool.physics.resolve.ball_cushion.stronge_compliant.model import (
+    StrongeCompliantCircular3D,
+    StrongeCompliantLinear3D,
+)
 from pooltool.physics.resolve.resolver import Resolver
 from pooltool.physics.resolve.stick_ball.instantaneous_point import (
     InstantaneousPoint3D,
@@ -43,6 +53,15 @@ def _build_3d_engine() -> SimulationEngine:
 
     # Replace all working 3D resolvers
     resolver.stick_ball = InstantaneousPoint3D()
+    resolver.ball_ball = FrictionalInelastic3D(
+        friction=AlciatoreBallBallFriction(
+            a=0.009951,
+            b=0.108,
+            c=1.088,
+        ),
+    )
+    resolver.ball_circular_cushion = StrongeCompliantCircular3D(omega_ratio=1.8)
+    resolver.ball_linear_cushion = StrongeCompliantLinear3D(omega_ratio=1.8)
 
     return SimulationEngine(resolver=resolver, is_3d=True)
 
@@ -174,11 +193,28 @@ def airborne_pocket_collision() -> System:
     return shot
 
 
+def bouncing_collision() -> System:
+    cue_ball = Ball.create("cue", xy=(0.5, 0.5))
+    one_ball = Ball.create("1", xy=(0.5, 0.9))
+    cue = Cue(cue_ball_id="cue")
+    cue.set_state(V0=2.25, phi=90.0, theta=31.0, a=0.0, b=0.0)
+
+    return System(
+        cue=cue,
+        table=Table.default(),
+        balls=(
+            cue_ball,
+            one_ball,
+        ),
+    )
+
+
 _map = {
     "drop": drop,
     "impulse_into": impulse_into,
     "jump": jump,
     "pocket_collision": airborne_pocket_collision,
+    "bouncing_collision": bouncing_collision,
 }
 
 

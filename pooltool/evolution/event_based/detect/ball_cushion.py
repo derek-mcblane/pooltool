@@ -35,18 +35,32 @@ from pooltool.ptmath.roots import (
 from pooltool.system.datatypes import System
 
 
-@jit(nopython=True, cache=const.use_numba_cache)
+# @jit(nopython=True, cache=const.use_numba_cache)
 def select_ball_linear_cushion_segment_collision_root(
     sorted_real_positive_roots: NDArray[np.float64],
-    p_rot_z: NDArray[np.float64],
-    start_z: float,
-    end_z: float,
+    p: NDArray[np.float64],
+    c: NDArray[np.float64],
+    cushion_length: float,
 ):
-    """Smallest positive real root that is within the bounds of the cushion segment"""
+    """Smallest positive real root
+    1. that is within the bounds of the cushion segment
+    2. for which the ball is moving towards the cushion segment
+    """
+
+    start_z = c[2]
+    end_z = start_z + cushion_length
+
+    v = np.array([p[1], 0.5 * p[2]])
+
     for t in sorted_real_positive_roots:
-        collision_z = p_rot_z[0] + p_rot_z[1] * t + p_rot_z[2] * t * t
-        if start_z < collision_z and collision_z < end_z:
-            return t
+        p_collision = p[0] + p[1] * t + p[2] * t * t
+        if not (start_z < p_collision[2] and p_collision[2] < end_z):
+            continue
+        xy_normal = p_collision[0:2] - c[0:2]
+        v_collision = v[0] + v[1] * t
+        if np.dot(xy_normal, v_collision[0:2]) > 0:
+            continue
+        return t
     return np.inf
 
 
@@ -85,19 +99,18 @@ def ball_linear_cushion_segment_collison_time(
         # C[3] must also be 0.0, and this is a quadratic
         assert C[3] == 0.0
         roots = quadratic.solve(C[2], C[1], C[0])
+    else:
+        roots = quartic.solve(C[4], C[3], C[2], C[1], C[0])
 
-    roots = quartic.solve(C[4], C[3], C[2], C[1], C[0])
-
-    start_z = cushion_origin_rotated[2]
-    end_z = start_z + ptmath.norm3d(cushion.p2 - cushion.p1)
     sorted_real_positive_roots = np.array(
         sorted(root.real for root in roots if is_real_number(root) and root.real > 0)
     )
+
     return select_ball_linear_cushion_segment_collision_root(
         sorted_real_positive_roots,
-        p_rotated.T[2],
-        start_z,
-        end_z,
+        p_rotated,
+        cushion_origin_rotated,
+        ptmath.norm3d(cushion.p2 - cushion.p1),
     )
 
 
